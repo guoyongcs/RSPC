@@ -16,7 +16,6 @@ import torch.distributed as dist
 from robust_models import Block, MaskBlock, Attention, DecompsableAttention
 import torch.nn as nn
 from timm.utils import *
-from fan_models.fan import FANBlock
 
 
 data_loaders_names = {
@@ -269,7 +268,7 @@ def FeatureAlignmentLoss(model):
     loss = 0
     counter = 1e-4
     for module in model.modules():
-        if isinstance(module, (Block, MaskBlock, FANBlock)):
+        if isinstance(module, (Block, MaskBlock)):
             if module.recon_loss is not None:
                 loss += module.recon_loss
                 counter += 1
