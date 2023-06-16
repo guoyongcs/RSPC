@@ -31,11 +31,10 @@ import logging
 import glob
 import sys
 import torch.distributed as dist
-import fan_models
 
 
 def get_args_parser():
-    parser = argparse.ArgumentParser('RVT training and evaluation script', add_help=False)
+    parser = argparse.ArgumentParser('RSPC training and evaluation script for RVT', add_help=False)
     parser.add_argument('--batch-size', default=64, type=int)
     parser.add_argument('--epochs', default=300, type=int)
 
