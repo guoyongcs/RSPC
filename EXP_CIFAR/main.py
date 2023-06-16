@@ -26,6 +26,7 @@ from engine import train_one_epoch, train_one_epoch_afa, evaluate, eval_inc, eva
 from losses import DistillationLoss
 from samplers import RASampler
 import robust_models
+import fan_models
 import utils
 import logging
 import glob
