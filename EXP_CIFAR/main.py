@@ -37,7 +37,7 @@ import torch.distributed as dist
 def get_args_parser():
     parser = argparse.ArgumentParser('RSPC training and evaluation script for RVT', add_help=False)
     parser.add_argument('--batch-size', default=64, type=int)
-    parser.add_argument('--epochs', default=300, type=int)
+    parser.add_argument('--epochs', default=200, type=int)
 
     # Model parameters
     parser.add_argument('--model', default='rvt_small', type=str, metavar='MODEL',
@@ -56,7 +56,7 @@ def get_args_parser():
     parser.add_argument('--model-ema-force-cpu', action='store_true', default=False, help='')
 
     # RVT params
-    parser.add_argument('--use_patch_aug', action='store_true')
+    parser.add_argument('--use_patch_aug', action='store_false')
 
     # Optimizer parameters
     parser.add_argument('--opt', default='adamw', type=str, metavar='OPTIMIZER',
@@ -89,7 +89,7 @@ def get_args_parser():
 
     parser.add_argument('--decay-epochs', type=float, default=30, metavar='N',
                         help='epoch interval to decay LR')
-    parser.add_argument('--warmup-epochs', type=int, default=5, metavar='N',
+    parser.add_argument('--warmup-epochs', type=int, default=0, metavar='N',
                         help='epochs to warmup LR, if scheduler supports')
     parser.add_argument('--cooldown-epochs', type=int, default=10, metavar='N',
                         help='epochs to cooldown LR at min_lr, after cyclic schedule ends')
@@ -178,7 +178,7 @@ def get_args_parser():
     parser.add_argument('--fgsm_test', action='store_true', default=False, help='test on FGSM attacker')
     parser.add_argument('--pgd_test', action='store_true', default=False, help='test on PGD attacker')
 
-    parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
+    parser.add_argument('--dist-eval', action='store_false', default=True, help='Enabling distributed evaluation')
     parser.add_argument('--num_workers', default=10, type=int)
     parser.add_argument('--pin-mem', action='store_true',
                         help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
@@ -201,8 +201,9 @@ def get_args_parser():
     parser.add_argument('--pretrain_path', type=str, default=None, help='pretrain_path')
 
     # afat parameters
-    parser.add_argument('--mr', default=0.1, type=float, help="")
+    parser.add_argument('--occlusion_ratio', default=0.1, type=float, help="occlusion ratio")
     parser.add_argument('--afa', action='store_true', help='adversarial feature alignment')
+    parser.add_argument('--no_rspc', action='store_false', dest='use_rspc', help='without RSPC')
     parser.add_argument('--extra_weight', type=float, default=0.005, help='lambda: the importance of feature alignment loss')
     parser.add_argument('--eval_model_ema', action='store_true', help='eval_model_ema')
 
@@ -390,13 +391,9 @@ def main(args):
 
     occlusion_model = None
     occlusion_model_optimizer = None
-    if args.afa:
-        occlusion_model = robust_models.PatchOcclusion(args.mr, 3, 16, 196)
+    if args.use_rspc:
+        occlusion_model = robust_models.PatchOcclusion(args.occlusion_ratio, 3, 16, 196)
         occlusion_model.to(device)
-        # occlusion_model_without_ddp = occlusion_model
-        # if args.distributed:
-        #     occlusion_model = torch.nn.parallel.DistributedDataParallel(occlusion_model, device_ids=[args.local_rank])
-        #     occlusion_model_without_ddp = occlusion_model.module
         occlusion_model_optimizer = torch.optim.SGD(occlusion_model.parameters(), momentum=0.9, nesterov=True, lr=1e-4, weight_decay=0.05)
 
     loss_scaler = NativeScaler()
@@ -491,28 +488,6 @@ def main(args):
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
         if occlusion_model is not None:
             occlusion_model = torch.nn.parallel.DistributedDataParallel(occlusion_model, device_ids=[args.local_rank])
-    # if args.resume:
-    #     if args.resume.startswith('https'):
-    #         checkpoint = torch.hub.load_state_dict_from_url(
-    #             args.resume, map_location='cpu', check_hash=True)
-    #     else:
-    #         checkpoint = torch.load(args.resume, map_location='cpu')
-    #     model_without_ddp.load_state_dict(checkpoint['model'])
-    #
-    #     if args.afa and "occlusion_model" in checkpoint:
-    #         occlusion_model_without_ddp.load_state_dict(checkpoint['occlusion_model'])
-    #
-    #     if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-    #         optimizer.load_state_dict(checkpoint['optimizer'])
-    #         if args.afa and "occlusion_model_optimizer" in checkpoint:
-    #             occlusion_model_optimizer.load_state_dict(checkpoint['occlusion_model_optimizer'])
-    #         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-    #         args.start_epoch = checkpoint['epoch'] + 1
-    #         if args.model_ema:
-    #             load_checkpoint(model_ema.module, args.resume, use_ema=True)
-    #             # utils._load_checkpoint_for_ema(model_ema, checkpoint['model_ema'])
-    #         if 'scaler' in checkpoint:
-    #             loss_scaler.load_state_dict(checkpoint['scaler'])
 
     if args.eval:
 
@@ -658,7 +633,7 @@ def main(args):
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
 
-        if args.afa:
+        if args.use_rspc:
             train_stats = train_one_epoch_afa(logger, args, model, criterion, data_loader_train, optimizer, device, epoch, loss_scaler, args.clip_grad, model_ema, mixup_fn, set_training_mode=args.finetune == '', occlusion_model=occlusion_model, occlusion_model_optimizer=occlusion_model_optimizer)
         else:
             train_stats = train_one_epoch(
