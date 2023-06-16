@@ -13,7 +13,7 @@ import datetime
 
 import torch
 import torch.distributed as dist
-from robust_models import Block, MaskBlock, Attention, DecompsableAttention
+from robust_models import Block, Attention, DecompsableAttention
 import torch.nn as nn
 from timm.utils import *
 from fan_models.fan import FANBlock
@@ -269,7 +269,7 @@ def FeatureAlignmentLoss(model):
     loss = 0
     counter = 1e-4
     for module in model.modules():
-        if isinstance(module, (Block, MaskBlock, FANBlock)):
+        if isinstance(module, (Block, FANBlock)):
             if module.recon_loss is not None:
                 loss += module.recon_loss
                 counter += 1

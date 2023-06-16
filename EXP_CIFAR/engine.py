@@ -26,35 +26,6 @@ from datasets import build_dataset
 def clamp(X, lower_limit, upper_limit):
     return torch.max(torch.min(X, upper_limit), lower_limit)
 
-def PGDAttack(x, y, model, attack_epsilon, attack_alpha, lower_limit, loss_fn, upper_limit, max_iters, random_init):
-    model.eval()
-
-    delta = torch.zeros_like(x).cuda()
-    if random_init:
-        for iiiii in range(len(attack_epsilon)):
-            delta[:, iiiii, :, :].uniform_(-attack_epsilon[iiiii][0][0].item(), attack_epsilon[iiiii][0][0].item())
-    
-    adv_imgs = clamp(x+delta, lower_limit, upper_limit)
-    max_iters = int(max_iters)
-    adv_imgs.requires_grad = True 
-
-    with torch.enable_grad():
-        for _iter in range(max_iters):
-            
-            outputs = model(adv_imgs)
-
-            loss = loss_fn(outputs, y)
-
-            grads = torch.autograd.grad(loss, adv_imgs, grad_outputs=None, 
-                    only_inputs=True)[0]
-
-            adv_imgs.data += attack_alpha * torch.sign(grads.data) 
-            
-            adv_imgs = clamp(adv_imgs, x-attack_epsilon, x+attack_epsilon)
-
-            adv_imgs = clamp(adv_imgs, lower_limit, upper_limit)
-
-    return adv_imgs.detach()
 
 def patch_level_aug(input1, patch_transform, upper_limit, lower_limit):
     bs, channle_size, H, W = input1.shape
@@ -101,7 +72,6 @@ def train_one_epoch(logger, args, model: torch.nn.Module, criterion: Distillatio
         is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
 
         use_autocast = False if 'rvt_base' in args.model else True
-        # use_autocast = True
         with torch.cuda.amp.autocast(enabled=use_autocast):
             if args.use_patch_aug:
                 outputs2 = model(aug_samples)
@@ -133,10 +103,6 @@ def train_one_epoch(logger, args, model: torch.nn.Module, criterion: Distillatio
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
-    # try:
-    #     logger.info("Averaged stats:", metric_logger)
-    # except:
-    #     pass
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
@@ -238,7 +204,7 @@ def train_one_epoch_rspc(logger, args, model: torch.nn.Module, criterion: Distil
 
 
 @torch.no_grad()
-def evaluate(logger, data_loader, model, device, mask=None, adv=None, args=None, indices_in_1k=None):
+def evaluate(logger, data_loader, model, device, mask=None, indices_in_1k=None):
     criterion = torch.nn.CrossEntropyLoss()
 
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -250,33 +216,12 @@ def evaluate(logger, data_loader, model, device, mask=None, adv=None, args=None,
     for images, target in metric_logger.log_every(data_loader, 10, logger, header):
         images = images.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
-
-        if adv == 'FGSM':
-            std_imagenet = torch.tensor((0.229, 0.224, 0.225)).view(3,1,1).cuda()
-            mu_imagenet = torch.tensor((0.485, 0.456, 0.406)).view(3,1,1).cuda()
-            attack_epsilon = (1 / 255.) / std_imagenet
-            attack_alpha = (1 / 255.) / std_imagenet
-            upper_limit = ((1 - mu_imagenet)/ std_imagenet)
-            lower_limit = ((0 - mu_imagenet)/ std_imagenet)
-            adv_input = PGDAttack(images, target, model, attack_epsilon, attack_alpha, lower_limit, criterion, upper_limit, max_iters=1, random_init=False)
-        elif adv == "PGD":
-            std_imagenet = torch.tensor((0.229, 0.224, 0.225)).view(3,1,1).cuda()
-            mu_imagenet = torch.tensor((0.485, 0.456, 0.406)).view(3,1,1).cuda()
-            attack_epsilon = (8 / 255.) / std_imagenet
-            attack_alpha = (2 / 255.) / std_imagenet
-            upper_limit = ((1 - mu_imagenet)/ std_imagenet)
-            lower_limit = ((0 - mu_imagenet)/ std_imagenet)
-            adv_input = PGDAttack(images, target, model, attack_epsilon, attack_alpha, lower_limit, criterion, upper_limit, max_iters=5, random_init=True)
-
         # compute output
         with torch.cuda.amp.autocast():
-            if adv:
-                output = model(adv_input)
+            if indices_in_1k is not None:
+                output = model(images)[:,indices_in_1k]
             else:
-                if indices_in_1k is not None:
-                    output = model(images)[:,indices_in_1k]
-                else:
-                    output = model(images)
+                output = model(images)
             loss = criterion(output, target)
 
         if mask is None:
@@ -333,63 +278,9 @@ def eval_cifarc(logger, model, device, args=None):
             drop_last=False
         )
 
-        test_stats = evaluate(logger, test_loader_val, model, device, args=args)
+        test_stats = evaluate(logger, test_loader_val, model, device)
         corruption_accs.append(test_stats['acc1'])
-    logger.info(f'mCE: {np.mean(corruption_accs):.2f}')
+    logger.info(f'mean corruption accuracy: {np.mean(corruption_accs):.2f}')
 
     return np.mean(corruption_accs)
-
-
-def eval_inc(logger, model, device, args=None):
-    """Evaluate network on given corrupted dataset."""
-
-    model.eval()
-
-    num_tasks = utils.get_world_size()
-    global_rank = utils.get_rank()
-
-    result_dict = {}
-    ce_alexnet = utils.get_ce_alexnet()
-
-    # transform for imagenet-c
-    inc_transform = torchvision.transforms.Compose([torchvision.transforms.CenterCrop(224),
-                                                    torchvision.transforms.ToTensor(),
-                                                    torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
-
-    for name, path in utils.data_loaders_names.items():
-        for severity in range(1, 6):
-            inc_dataset = torchvision.datasets.ImageFolder(os.path.join(args.inc_path, path, str(severity)), transform=inc_transform)
-
-            sampler_val = torch.utils.data.DistributedSampler(
-                inc_dataset, num_replicas=num_tasks, rank=global_rank, shuffle=False)
-
-            inc_data_loader = torch.utils.data.DataLoader(
-                inc_dataset, sampler=sampler_val, batch_size=int(args.batch_size),
-                num_workers=args.workers,
-                pin_memory=args.pin_mem,
-                drop_last=False
-            )
-            test_stats = evaluate(logger, inc_data_loader, model, device, args=args)
-            logger.info(f"Accuracy on the {name+'({})'.format(severity)}: {test_stats['acc1']:.1f}%")
-            result_dict[name+'({})'.format(severity)] = test_stats['acc1']
-
-    mCE = 0
-    counter = 0
-    overall_acc = 0
-    for name, path in utils.data_loaders_names.items():
-        acc_top1 = 0
-        for severity in range(1, 6):
-            acc_top1 += result_dict[name+'({})'.format(severity)]
-        acc_top1 /= 5
-        CE = utils.get_mce_from_accuracy(acc_top1, ce_alexnet[name])
-        mCE += CE
-        overall_acc += acc_top1
-        counter += 1
-        logger.info("{0}: Top1 accuracy {1:.2f}, CE: {2:.2f}".format(
-            name, acc_top1, 100. * CE))
-
-    overall_acc /= counter
-    mCE /= counter
-    logger.info("Corruption Top1 accuracy {0:.2f}, mCE: {1:.2f}".format(overall_acc, mCE * 100.))
-    return mCE * 100.
 

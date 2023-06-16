@@ -22,7 +22,7 @@ from timm.optim import create_optimizer
 from timm.utils import NativeScaler, get_state_dict, ModelEmaV2
 
 from datasets import build_dataset, build_transform
-from engine import train_one_epoch, train_one_epoch_rspc, evaluate, eval_inc, eval_cifarc
+from engine import train_one_epoch, train_one_epoch_rspc, evaluate, eval_cifarc
 from losses import DistillationLoss
 from samplers import RASampler
 import robust_models
