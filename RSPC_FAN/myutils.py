@@ -16,8 +16,6 @@ import torch.distributed as dist
 import numpy as np
 from torchvision import datasets, transforms
 
-import cifar_augmentations
-import imagenet_augmentations
 from torch.autograd import Variable
 import torch.nn as nn
 
@@ -247,43 +245,6 @@ def is_main_process():
 def save_on_master(*args, **kwargs):
     if is_main_process():
         torch.save(*args, **kwargs)
-
-
-def aug(args, image, preprocess):
-    """Perform AugMix augmentations and compute mixture.
-
-    Args:
-      image: PIL.Image input image
-      preprocess: Preprocessing function which should return a torch tensor.
-
-    Returns:
-      mixed: Augmented and mixed image.
-    """
-    if 'cifar' in args.dataset:
-        aug_list = cifar_augmentations.augmentations
-        if args.all_ops:
-            aug_list = cifar_augmentations.augmentations_all
-    else:
-        aug_list = imagenet_augmentations.augmentations
-        if args.all_ops:
-            aug_list = imagenet_augmentations.augmentations_all
-    ws = np.float32(
-        np.random.dirichlet([args.aug_prob_coeff] * args.mixture_width))
-    m = np.float32(np.random.beta(args.aug_prob_coeff, args.aug_prob_coeff))
-
-    mix = torch.zeros_like(preprocess(image))
-    for i in range(args.mixture_width):
-        image_aug = image.copy()
-        depth = args.mixture_depth if args.mixture_depth > 0 else np.random.randint(
-            1, 4)
-        for _ in range(depth):
-            op = np.random.choice(aug_list)
-            image_aug = op(image_aug, args.aug_severity)
-        # Preprocessing commutes since all coefficients are convex
-        mix += ws[i] * preprocess(image_aug)
-
-    mixed = (1 - m) * preprocess(image) + m * mix
-    return mixed
 
 
 def FeatureAlignmentLoss(model):
