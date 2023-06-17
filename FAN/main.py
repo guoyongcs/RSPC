@@ -1,7 +1,3 @@
-# Copyright (c) 2021-2022, NVIDIA Corporation & Affiliates. All rights reserved.
-#
-# This work is made available under the Nvidia Source Code License-NC.
-
 """ ImageNet Training Script
 
 This is intended to be a lean and easily modifiable ImageNet training script that reproduces ImageNet
@@ -168,8 +164,6 @@ parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train (default: 2)')
 parser.add_argument('--start-epoch', default=None, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('--ft_start_epoch', default=0, type=int, metavar='N',
-                    help='start epoch')
 parser.add_argument('--decay-epochs', type=float, default=30, metavar='N',
                     help='epoch interval to decay LR')
 parser.add_argument('--warmup-epochs', type=int, default=3, metavar='N',
@@ -317,23 +311,18 @@ parser.add_argument('--use-checkpoint', action='store_true',
 parser.add_argument('--use_patch_aug', action='store_true')
 parser.add_argument('--not_load_ema', action='store_true')
 
-# FT params
-parser.add_argument('--pretrain_path', type=str, default=None, help='pretrain_path')
-
 # DeepAugment
 parser.add_argument('--deepaugment', action='store_true', default=False, help='deepaugment')
-parser.add_argument('--deepaugment_base_path', type=str, default='/BS/yong_project1/work/dataset/CIFAR-10-DeepAugment', help='deepaugment_base_path')
-parser.add_argument('--remove_deepaug', type=int, default=1000, help='remove_deepaug')
+parser.add_argument('--deepaugment_base_path', type=str, default=None, help='deepaugment_base_path')
 
-# afat parameters
-parser.add_argument('--mr', default=0.1, type=float, help="")
-parser.add_argument('--afa', action='store_true', help='adversarial feature alignment')
-parser.add_argument('--extra_weight', type=float, default=0.005, help='lambda: the importance of feature alignment loss')
+# test params
+parser.add_argument('--pretrain_path', type=str, default=None, help='pretrain_path')
 parser.add_argument('--eval_model_ema', action='store_true', help='eval_model_ema')
-parser.add_argument('--cifarc_base_path', default='/BS/yong_project1/work/dataset/CIFAR-10-C', type=str, help='cifarc_base_path')
-parser.add_argument('--adv', action='store_true', help='adversarial training with TRADES')
-parser.add_argument('--perturb_steps', type=int, default=1, help='number of perturb steps')
 
+# rspc parameters
+parser.add_argument('--occlusion_ratio', default=0.1, type=float, help="occlusion ratio")
+parser.add_argument('--no_rspc', action='store_false', dest='use_rspc', help='without RSPC')
+parser.add_argument('--extra_weight', type=float, default=0.005, help='lambda: the importance of feature alignment loss')
 
 def _parse_args():
     args_config, remaining = config_parser.parse_known_args()
@@ -378,8 +367,6 @@ def main():
         Path(os.path.join(args.output, 'occlusion')).mkdir(parents=True, exist_ok=True)
     except:
         print('fail to create dir')
-    # setup_default_logging(log_path=os.path.join(args.output, 'log.txt'))
-
 
     args.prefetcher = not args.no_prefetcher
     args.distributed = False
@@ -474,9 +461,6 @@ def main():
                      (args.model, sum([m.numel() for m in model.parameters()])))
 
     data_config = resolve_data_config(vars(args), model=model, verbose=args.local_rank == 0)
-    if args.dataset == 'CIFAR10':
-        data_config['mean'] = (0.49139968, 0.48215827, 0.44653124)
-        data_config['std'] = (0.24703233, 0.24348505, 0.26158768)
 
     # setup augmentation batch splits for contrastive loss or split bn
     num_aug_splits = 0
@@ -516,8 +500,8 @@ def main():
 
     occlusion_model = None
     occlusion_model_optimizer = None
-    if args.afa:
-        occlusion_model = PatchOcclusion(args.mr, 3, 16, 196)
+    if args.use_rspc:
+        occlusion_model = PatchOcclusion(args.occlusion_ratio, 3, 16, 196)
         occlusion_model.cuda()
         occlusion_model_optimizer = torch.optim.SGD(occlusion_model.parameters(), momentum=0.9, nesterov=True, lr=1e-4, weight_decay=0.05)
 
@@ -539,7 +523,6 @@ def main():
         if args.local_rank == 0:
             _logger.info('AMP not enabled. Training in float32.')
 
-
     checkpoint_path = os.path.join(args.output, 'last.pth.tar')
     if os.path.exists(checkpoint_path):
         args.resume = checkpoint_path
@@ -552,7 +535,6 @@ def main():
                     _ = load_checkpoint(occlusion_model, os.path.join(os.path.dirname(args.pretrain_path), 'occlusion', 'last.pth.tar'))
                 except:
                     pass
-
 
     # optionally resume from a checkpoint
     resume_epoch = None
@@ -611,23 +593,17 @@ def main():
         _logger.info('Scheduled epochs: {}'.format(num_epochs))
 
     # create the train and eval datasets
-    if 'CIFAR' in args.dataset:
-        dataset_train, _ = myutils.build_dataset(True, args)
-    else:
-        dataset_train = create_dataset(
-                args.dataset, root=args.data_dir, split=args.train_split, is_training=True, batch_size=args.batch_size)
-        if args.deepaugment:
-            edsr_data = create_dataset(
-                args.dataset, root=os.path.join(args.deepaugment_base_path, 'EDSR'), split=args.train_split, search_split=False, is_training=True, batch_size=args.batch_size)
-            cae_data = create_dataset(
-                args.dataset, root=os.path.join(args.deepaugment_base_path, 'CAE'), split=args.train_split, search_split=False, is_training=True, batch_size=args.batch_size)
-            dataset_train.parser.samples = dataset_train.parser.samples + edsr_data.parser.samples + cae_data.parser.samples
+    dataset_train = create_dataset(
+            args.dataset, root=args.data_dir, split=args.train_split, is_training=True, batch_size=args.batch_size)
+    if args.deepaugment:
+        edsr_data = create_dataset(
+            args.dataset, root=os.path.join(args.deepaugment_base_path, 'EDSR'), split=args.train_split, search_split=False, is_training=True, batch_size=args.batch_size)
+        cae_data = create_dataset(
+            args.dataset, root=os.path.join(args.deepaugment_base_path, 'CAE'), split=args.train_split, search_split=False, is_training=True, batch_size=args.batch_size)
+        dataset_train.parser.samples = dataset_train.parser.samples + edsr_data.parser.samples + cae_data.parser.samples
 
-    if 'CIFAR' in args.dataset:
-        dataset_eval, _ = myutils.build_dataset(False, args)
-    else:
-        dataset_eval = create_dataset(
-            args.dataset, root=args.data_dir, split=args.val_split, is_training=False, batch_size=args.batch_size)
+    dataset_eval = create_dataset(
+        args.dataset, root=args.data_dir, split=args.val_split, is_training=False, batch_size=args.batch_size)
 
     # setup mixup / cutmix
     collate_fn = None
@@ -654,47 +630,33 @@ def main():
     if args.no_aug or not train_interpolation:
         train_interpolation = data_config['interpolation']
 
-    if 'CIFAR' in args.dataset:
-        num_tasks = myutils.get_world_size()
-        global_rank = myutils.get_rank()
-        sampler_train = torch.utils.data.DistributedSampler(
-            dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=False
-        )
-        loader_train = torch.utils.data.DataLoader(
-            dataset_train, sampler=sampler_train,
-            batch_size=args.batch_size,
-            num_workers=args.workers,
-            pin_memory=args.pin_mem,
-            drop_last=True,
-        )
-    else:
-        loader_train = create_loader(
-            dataset_train,
-            input_size=data_config['input_size'],
-            batch_size=args.batch_size,
-            is_training=True,
-            use_prefetcher=args.prefetcher,
-            no_aug=args.no_aug,
-            re_prob=args.reprob,
-            re_mode=args.remode,
-            re_count=args.recount,
-            re_split=args.resplit,
-            scale=args.scale,
-            ratio=args.ratio,
-            hflip=args.hflip,
-            vflip=args.vflip,
-            color_jitter=args.color_jitter,
-            auto_augment=args.aa,
-            num_aug_splits=num_aug_splits,
-            interpolation=train_interpolation,
-            mean=data_config['mean'],
-            std=data_config['std'],
-            num_workers=args.workers,
-            distributed=args.distributed,
-            collate_fn=collate_fn,
-            pin_memory=args.pin_mem,
-            use_multi_epochs_loader=args.use_multi_epochs_loader,
-        )
+    loader_train = create_loader(
+        dataset_train,
+        input_size=data_config['input_size'],
+        batch_size=args.batch_size,
+        is_training=True,
+        use_prefetcher=args.prefetcher,
+        no_aug=args.no_aug,
+        re_prob=args.reprob,
+        re_mode=args.remode,
+        re_count=args.recount,
+        re_split=args.resplit,
+        scale=args.scale,
+        ratio=args.ratio,
+        hflip=args.hflip,
+        vflip=args.vflip,
+        color_jitter=args.color_jitter,
+        auto_augment=args.aa,
+        num_aug_splits=num_aug_splits,
+        interpolation=train_interpolation,
+        mean=data_config['mean'],
+        std=data_config['std'],
+        num_workers=args.workers,
+        distributed=args.distributed,
+        collate_fn=collate_fn,
+        pin_memory=args.pin_mem,
+        use_multi_epochs_loader=args.use_multi_epochs_loader,
+    )
 
     loader_eval = create_loader(
         dataset_eval,
@@ -724,7 +686,6 @@ def main():
     else:
         train_loss_fn = nn.CrossEntropyLoss().cuda()
     validate_loss_fn = nn.CrossEntropyLoss().cuda()
-
 
     # setup checkpoint saver and eval metric tracking
     eval_metric = args.eval_metric
@@ -764,54 +725,14 @@ def main():
             sys.exit(0)
 
         for epoch in range(start_epoch, num_epochs):
-            if args.deepaugment and epoch-args.ft_start_epoch>args.remove_deepaug:
-                dataset_train = create_dataset(
-                    args.dataset, root=args.data_dir, split=args.train_split, is_training=True, batch_size=args.batch_size)
-                loader_train = create_loader(
-                    dataset_train,
-                    input_size=data_config['input_size'],
-                    batch_size=args.batch_size,
-                    is_training=True,
-                    use_prefetcher=args.prefetcher,
-                    no_aug=args.no_aug,
-                    re_prob=args.reprob,
-                    re_mode=args.remode,
-                    re_count=args.recount,
-                    re_split=args.resplit,
-                    scale=args.scale,
-                    ratio=args.ratio,
-                    hflip=args.hflip,
-                    vflip=args.vflip,
-                    color_jitter=args.color_jitter,
-                    auto_augment=args.aa,
-                    num_aug_splits=num_aug_splits,
-                    interpolation=train_interpolation,
-                    mean=data_config['mean'],
-                    std=data_config['std'],
-                    num_workers=args.workers,
-                    distributed=args.distributed,
-                    collate_fn=collate_fn,
-                    pin_memory=args.pin_mem,
-                    use_multi_epochs_loader=args.use_multi_epochs_loader,
-                )
-
-            if args.ft_start_epoch > 0:
-                if epoch==args.ft_start_epoch:
-                    lr_scheduler.step(epoch-1)
-
             if args.distributed and hasattr(loader_train.sampler, 'set_epoch'):
                 loader_train.sampler.set_epoch(epoch)
 
-            if args.afa:
-                train_metrics = train_one_epoch_afa(
+            if args.use_rspc:
+                train_metrics = train_one_epoch_rspc(
                     epoch, model, loader_train, optimizer, train_loss_fn, args,
                     lr_scheduler=lr_scheduler, saver=saver, output_dir=output_dir,
                     amp_autocast=amp_autocast, loss_scaler=loss_scaler, model_ema=model_ema, mixup_fn=mixup_fn, optimizers=optimizers, accumulation_steps=args.accumulation_steps, occlusion_model=occlusion_model, occlusion_model_optimizer=occlusion_model_optimizer)
-            elif args.adv:
-                train_metrics = train_one_epoch_trades(
-                    epoch, model, loader_train, optimizer, train_loss_fn, args,
-                    lr_scheduler=lr_scheduler, saver=saver, output_dir=output_dir,
-                    amp_autocast=amp_autocast, loss_scaler=loss_scaler, model_ema=model_ema, mixup_fn=mixup_fn, optimizers=optimizers, accumulation_steps=args.accumulation_steps)
             else:
                 train_metrics = train_one_epoch(
                     epoch, model, loader_train, optimizer, train_loss_fn, args,
@@ -831,7 +752,6 @@ def main():
                 ema_eval_metrics = validate(
                     model_ema.module, loader_eval, validate_loss_fn, args, amp_autocast=amp_autocast, log_suffix=' (EMA)')
                 eval_metrics['ema_acc'] = ema_eval_metrics['top1']
-                # eval_metrics = ema_eval_metrics
 
             if lr_scheduler is not None:
                 # step LR for next epoch
@@ -848,19 +768,9 @@ def main():
             if args.backup and args.local_rank == 0:
                 backup(output_dir, args.backup)
 
-            # eval_inc_interval = 10
-            # if (epoch+1)%eval_inc_interval == 0:
-            #     eval_metrics['mCE'] = eval_inc(_logger, model, torch.device('cuda'), args=args)
-
             update_summary(
                 epoch, train_metrics, eval_metrics, os.path.join(output_dir, 'summary.csv'),
                 write_header=best_metric is None)
-
-        if 'CIFAR' in args.dataset:
-            corruption_accuracy = eval_cifarc(_logger, model, torch.device('cuda'), args)
-        else:
-            corruption_accuracy = eval_inc(_logger, model, torch.device('cuda'), args=args)
-        _logger.info(f"mCE: {corruption_accuracy:.1f}%")
 
     except KeyboardInterrupt:
         pass
@@ -924,11 +834,6 @@ def train_one_epoch(
                 outputs = model(input)
                 loss = loss_fn(outputs, target)
 
-
-        # with amp_autocast():
-        #     output = model(input)
-        #     loss = loss_fn(output, target)
-
         if not args.distributed:
             losses_m.update(loss.item(), input.size(0))
 
@@ -969,8 +874,6 @@ def train_one_epoch(
             if model_ema is not None:
                 model_ema.update(model)
 
-        # print(torch.cuda.max_memory_allocated() / 1024**2)
-
         torch.cuda.synchronize()
         num_updates += 1
         batch_time_m.update(time.time() - end)
@@ -997,8 +900,6 @@ def train_one_epoch(
                         eta_string,
                         loss=losses_m,
                         batch_time=batch_time_m,
-                        # rate=input.size(0) * args.world_size / batch_time_m.val,
-                        # rate_avg=input.size(0) * args.world_size / batch_time_m.avg,
                         lr=lr,
                         data_time=data_time_m))
 
@@ -1025,7 +926,7 @@ def train_one_epoch(
     return OrderedDict([('loss', losses_m.avg)])
 
 
-def train_one_epoch_afa(
+def train_one_epoch_rspc(
         epoch, model, loader, optimizer, loss_fn, args,
         lr_scheduler=None, saver=None, output_dir='', amp_autocast=suppress,
         loss_scaler=None, model_ema=None, mixup_fn=None, optimizers = None, accumulation_steps=1, occlusion_model=None, occlusion_model_optimizer=None):
@@ -1142,186 +1043,6 @@ def train_one_epoch_afa(
             myutils.reverse_grad(occlusion_model_optimizer)
             occlusion_model_optimizer.step()
 
-
-            if model_ema is not None:
-                model_ema.update(model)
-
-        # print(torch.cuda.max_memory_allocated() / 1024**2)
-
-        torch.cuda.synchronize()
-        num_updates += 1
-        batch_time_m.update(time.time() - end)
-        if last_batch or batch_idx % args.log_interval == 0:
-            lrl = [param_group['lr'] for param_group in optimizer.param_groups]
-            lr = sum(lrl) / len(lrl)
-
-            if args.distributed:
-                reduced_loss = reduce_tensor(loss.data, args.world_size)
-                losses_m.update(reduced_loss.item(), input.size(0))
-
-            if args.local_rank == 0:
-                eta_string = str(datetime.timedelta(seconds=int(batch_time_m.avg * (len(loader) - batch_idx))))
-                _logger.info(
-                    'Train: {} [{:>4d}/{} ({:>3.0f}%)] eta: {}   '
-                    'Loss: {loss.val:>9.6f} ({loss.avg:>6.4f})  '
-                    'Time: {batch_time.val:.3f}s,  '
-                    '({batch_time.avg:.3f}s,  '
-                    'LR: {lr:.3e}  '
-                    'Data: {data_time.val:.3f} ({data_time.avg:.3f})'.format(
-                        epoch,
-                        batch_idx, len(loader),
-                        100. * batch_idx / last_idx,
-                        eta_string,
-                        loss=losses_m,
-                        batch_time=batch_time_m,
-                        # rate=input.size(0) * args.world_size / batch_time_m.val,
-                        # rate_avg=input.size(0) * args.world_size / batch_time_m.avg,
-                        lr=lr,
-                        data_time=data_time_m))
-
-                if args.save_images and output_dir:
-                    torchvision.utils.save_image(
-                        input,
-                        os.path.join(output_dir, 'train-batch-%d.jpg' % batch_idx),
-                        padding=0,
-                        normalize=True)
-
-        if saver is not None and args.recovery_interval and (
-                last_batch or (batch_idx + 1) % args.recovery_interval == 0):
-            saver.save_recovery(epoch, batch_idx=batch_idx)
-
-        if lr_scheduler is not None:
-            lr_scheduler.step_update(num_updates=num_updates, metric=losses_m.avg)
-
-        end = time.time()
-        # end for
-
-    if hasattr(optimizer, 'sync_lookahead'):
-        optimizer.sync_lookahead()
-
-    return OrderedDict([('loss', losses_m.avg)])
-
-
-def train_one_epoch_trades(
-        epoch, model, loader, optimizer, loss_fn, args,
-        lr_scheduler=None, saver=None, output_dir='', amp_autocast=suppress,
-        loss_scaler=None, model_ema=None, mixup_fn=None, optimizers = None, accumulation_steps=1):
-
-    if args.mixup_off_epoch and epoch >= args.mixup_off_epoch:
-        if args.prefetcher and loader.mixup_enabled:
-            loader.mixup_enabled = False
-        elif mixup_fn is not None:
-            mixup_fn.mixup_enabled = False
-
-    second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
-    batch_time_m = AverageMeter()
-    data_time_m = AverageMeter()
-    losses_m = AverageMeter()
-    log_epsilon=1e-12
-    step_size=0.007
-    epsilon = 0.031
-
-    criterion_kl = myutils.Robust_KL_Loss()
-    criterion_kl = criterion_kl.cuda()
-
-    std_imagenet = torch.tensor((0.229, 0.224, 0.225)).view(3,1,1).cuda()
-    mu_imagenet = torch.tensor((0.485, 0.456, 0.406)).view(3,1,1).cuda()
-    upper_limit = ((1 - mu_imagenet)/ std_imagenet)
-    lower_limit = ((0 - mu_imagenet)/ std_imagenet)
-
-    end = time.time()
-    last_idx = len(loader) - 1
-    num_updates = epoch * len(loader)
-    for batch_idx, (input, target) in enumerate(loader):
-        last_batch = batch_idx == last_idx
-        data_time_m.update(time.time() - end)
-        input, target = input.cuda(), target.cuda()
-        if mixup_fn is not None:
-            input, target = mixup_fn(input, target)
-        if args.channels_last:
-            input = input.contiguous(memory_format=torch.channels_last)
-
-        if args.use_patch_aug:
-            patch_transform = nn.Sequential(
-                K.augmentation.RandomResizedCrop(size=(16,16), scale=(0.85,1.0), ratio=(1.0,1.0), p=0.1),
-                K.augmentation.RandomGaussianNoise(mean=0., std=0.01, p=0.1),
-                K.augmentation.RandomHorizontalFlip(p=0.1)
-            )
-            aug_samples = patch_level_aug(input, patch_transform, upper_limit, lower_limit)
-        is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
-
-        model.eval()
-        x_adv = input.detach() + 0.001 * torch.randn(input.shape).cuda().detach()
-        for _ in range(args.perturb_steps):
-            x_adv.requires_grad_()
-            with torch.enable_grad():
-                output, output_adv = model(input, x_adv)
-                loss_kl = criterion_kl(F.log_softmax(output_adv, dim=1),
-                                       F.softmax(output, dim=1))
-            grad = torch.autograd.grad(loss_kl, [x_adv])[0]
-            x_adv = x_adv.detach() + step_size * torch.sign(grad.detach())
-            x_adv = torch.min(torch.max(x_adv, input - epsilon), input + epsilon)
-            x_adv = torch.clamp(x_adv, 0.0, 1.0)
-
-        model.train()
-        with amp_autocast():
-            if args.use_patch_aug:
-                outputs2 = model(aug_samples)
-                loss = loss_fn(outputs2, target)
-                loss_scaler._scaler.scale(loss).backward(create_graph=is_second_order)
-                outputs = model(input)
-                loss = loss_fn(outputs, target)
-            else:
-                logits, adv_logits = model(input, x_adv)
-                ce_loss = loss_fn(logits, target)
-                adv_probs = F.softmax(adv_logits, dim=1)
-                loss_adv = criterion_kl(torch.log(adv_probs + log_epsilon), F.softmax(logits, dim=1))
-                loss = ce_loss + 6 * loss_adv
-
-                # outputs = model(input)
-                # loss = loss_fn(outputs, target)
-
-
-        # with amp_autocast():
-        #     output = model(input)
-        #     loss = loss_fn(output, target)
-
-        if not args.distributed:
-            losses_m.update(loss.item(), input.size(0))
-
-        if accumulation_steps > 1:
-            loss = loss / accumulation_steps
-
-            if (batch_idx + 1) % accumulation_steps == 0:
-                if loss_scaler is not None:
-                    loss_scaler(
-                        loss, optimizer,
-                        clip_grad=args.clip_grad, clip_mode=args.clip_mode,
-                        parameters=model_parameters(model, exclude_head='agc' in args.clip_mode),
-                        create_graph=second_order)
-                else:
-                    loss.backward(create_graph=second_order)
-                    optimizer.step()
-                optimizer.zero_grad()
-
-                if model_ema is not None:
-                    model_ema.update(model)
-            else:
-                if loss_scaler is not None:
-                    loss_scaler._scaler.scale(loss).backward(create_graph=second_order)
-                else:
-                    loss.backward(create_graph=second_order)
-        else:
-            optimizer.zero_grad()
-            if loss_scaler is not None:
-                loss_scaler(
-                    loss, optimizer,
-                    clip_grad=args.clip_grad, clip_mode=args.clip_mode,
-                    parameters=model_parameters(model, exclude_head='agc' in args.clip_mode),
-                    create_graph=second_order)
-            else:
-                loss.backward(create_graph=second_order)
-                optimizer.step()
 
             if model_ema is not None:
                 model_ema.update(model)
@@ -1501,48 +1222,6 @@ def eval_inc(logger, model, device, args=None):
     mCE /= counter
     logger.info("Corruption Top1 accuracy {0:.2f}, mCE: {1:.2f}".format(overall_acc, mCE * 100.))
     return mCE * 100.
-
-
-def eval_cifarc(logger, model, device, args=None):
-    """Evaluate network on given corrupted dataset."""
-    CORRUPTIONS = [
-        'gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur',
-        'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog',
-        'brightness', 'contrast', 'elastic_transform', 'pixelate',
-        'jpeg_compression'
-    ]
-
-    # switch to evaluation mode
-    model.eval()
-
-    num_tasks = myutils.get_world_size()
-    global_rank = myutils.get_rank()
-
-    test_data, _ = myutils.build_dataset(False, args)
-    base_path = args.cifarc_base_path
-
-    corruption_accs = []
-    for corruption in CORRUPTIONS:
-        # Reference to original data is mutated
-        test_data.data = np.load(os.path.join(base_path, corruption + '.npy'))
-        test_data.targets = torch.LongTensor(np.load(os.path.join(base_path, 'labels.npy')))
-
-        sampler_val = torch.utils.data.DistributedSampler(
-            test_data, num_replicas=num_tasks, rank=global_rank, shuffle=False)
-
-        test_loader_val = torch.utils.data.DataLoader(
-            test_data, sampler=sampler_val,
-            batch_size=int(args.batch_size),
-            num_workers=args.num_workers,
-            pin_memory=args.pin_mem,
-            drop_last=False
-        )
-
-        test_stats = evaluate(logger, test_loader_val, model, device, args=args)
-        corruption_accs.append(test_stats['acc1'])
-    logger.info(f'mCE: {np.mean(corruption_accs):.2f}')
-
-    return np.mean(corruption_accs)
 
 
 def evaluate(logger, data_loader, model, device, mask=None, adv=None, args=None, eval_header=None, controller=None):

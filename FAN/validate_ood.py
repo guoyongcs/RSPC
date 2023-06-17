@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# Copyright (c) 2021-2022, NVIDIA Corporation & Affiliates. All rights reserved.
-#
-# This work is made available under the Nvidia Source Code License-NC.
-# To view a copy of this license, visit
-# https://github.com/NVlabs/FAN/blob/main/LICENSE
-
 """ ImageNet Validation Script
 
 This is intended to be a lean and easily modifiable ImageNet validation script for evaluating pretrained
