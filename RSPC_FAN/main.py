@@ -414,6 +414,8 @@ def main():
         _logger.info('Training with a single process on 1 GPUs.')
     assert args.rank >= 0
 
+    _logger.info(args)
+
     # resolve AMP arguments based on PyTorch / Apex availability
     use_amp = None
     if args.amp:
