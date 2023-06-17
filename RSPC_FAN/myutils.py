@@ -20,7 +20,6 @@ from torch.autograd import Variable
 import torch.nn as nn
 
 import torch.nn.functional as F
-from robust_models import Attention, MaskBlock, MaskAttention, MaskPoolingTransformer
 from timm.utils import *
 import glob
 from models.fan import FANBlock
@@ -299,98 +298,6 @@ def _threshold(x, threshold=None):
         return (x > quantile).type(x.dtype)
     else:
         return x
-
-
-def iou(pr, gt, eps=1e-7, threshold=0.5):
-    """Calculate Intersection over Union between ground truth and prediction
-    Args:
-        pr (torch.Tensor): predicted tensor
-        gt (torch.Tensor):  ground truth tensor
-        eps (float): epsilon to avoid zero division
-        threshold: threshold for outputs binarization
-    Returns:
-        float: IoU (Jaccard) score
-    """
-
-    pr = _threshold(pr, threshold=threshold)
-    gt = _threshold(gt, threshold=threshold)
-
-    intersection = torch.sum(gt * pr)
-    union = torch.sum(gt) + torch.sum(pr) - intersection + eps
-    return (intersection + eps) / union
-
-
-def mIoU_attn(model, samples, occluded_samples, topk=0.1):
-    total_iou = 0
-    num_attn = 0
-
-    joint_input = torch.cat([samples, occluded_samples], 0)
-    _ = model(joint_input)
-    for module in model.modules():
-        if isinstance(module, (Attention, MaskAttention)):
-            if module.vis_attn is not None:
-                layer_attn = module.vis_attn
-                B, num_heads, N, N = layer_attn.shape
-                layer_attn_0 = layer_attn[0:B//2]
-                layer_attn_1 = layer_attn[B//2:]
-                total_iou+=iou(layer_attn_0,layer_attn_1,threshold=1-topk)
-                num_attn += 1
-    miou = total_iou/(num_attn+1e-6)
-    return miou
-
-def cosine_attn(model, samples, occluded_samples):
-    total_sim = 0
-    num_attn = 0
-
-    joint_input = torch.cat([samples, occluded_samples], 0)
-    _ = model(joint_input)
-    for module in model.modules():
-        if isinstance(module, (Attention, MaskAttention)):
-            if module.vis_attn is not None:
-                layer_attn = module.vis_attn
-                B, num_heads, N, N = layer_attn.shape
-                layer_attn_0 = layer_attn[0:B//2]
-                layer_attn_1 = layer_attn[B//2:]
-                total_sim+=F.cosine_similarity(layer_attn_0, layer_attn_1, -1, 1e-6).sum()
-                num_attn += num_heads*N*B//2
-    msim = total_sim/(num_attn+1e-6)
-    return msim
-
-
-def iou_threshold(pr, gt, eps=1e-7, threshold=0.5):
-    """Calculate Intersection over Union between ground truth and prediction
-    Args:
-        pr (torch.Tensor): predicted tensor
-        gt (torch.Tensor):  ground truth tensor
-        eps (float): epsilon to avoid zero division
-        threshold: threshold for outputs binarization
-    Returns:
-        float: IoU (Jaccard) score
-    """
-    pr = (pr > threshold).type(pr.dtype)
-    gt = (gt > threshold).type(gt.dtype)
-    intersection = torch.sum(gt * pr)
-    union = torch.sum(gt) + torch.sum(pr) - intersection + eps
-    return intersection / union
-
-
-def mIoU_attn_threshold(model, samples, occluded_samples, threshold):
-    total_iou = 0
-    num_attn = 0
-
-    joint_input = torch.cat([samples, occluded_samples], 0)
-    out = model(joint_input)
-    for module in model.modules():
-        if isinstance(module, (Attention, MaskAttention)):
-            if module.vis_attn is not None:
-                layer_attn = module.vis_attn
-                B, num_heads, N, N = layer_attn.shape
-                layer_attn_0 = layer_attn[0:B//2]
-                layer_attn_1 = layer_attn[B//2:]
-                total_iou+=iou_threshold(layer_attn_0,layer_attn_1,threshold=threshold)
-                num_attn += 1
-    miou = total_iou/(num_attn+1e-6) + torch.zeros(1).to(samples.device)
-    return miou
 
 
 class AvgrageMeter(object):
