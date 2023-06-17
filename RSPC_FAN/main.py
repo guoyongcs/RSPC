@@ -931,7 +931,7 @@ def train_one_epoch_rspc(
         epoch, model, loader, optimizer, loss_fn, args,
         lr_scheduler=None, saver=None, output_dir='', amp_autocast=suppress,
         loss_scaler=None, model_ema=None, mixup_fn=None, optimizers = None, accumulation_steps=1, occlusion_model=None, occlusion_model_optimizer=None):
-
+    assert False
     if args.mixup_off_epoch and epoch >= args.mixup_off_epoch:
         if args.prefetcher and loader.mixup_enabled:
             loader.mixup_enabled = False
