@@ -1,5 +1,3 @@
-# Copyright (c) 2015-present, Facebook, Inc.
-# All rights reserved.
 import os
 import argparse
 import datetime
@@ -91,7 +89,7 @@ def get_args_parser():
                         help='epoch interval to decay LR')
     parser.add_argument('--warmup-epochs', type=int, default=0, metavar='N',
                         help='epochs to warmup LR, if scheduler supports')
-    parser.add_argument('--cooldown-epochs', type=int, default=10, metavar='N',
+    parser.add_argument('--cooldown-epochs', type=int, default=0, metavar='N',
                         help='epochs to cooldown LR at min_lr, after cyclic schedule ends')
     parser.add_argument('--patience-epochs', type=int, default=10, metavar='N',
                         help='patience epochs for Plateau LR scheduler (default: 10')
@@ -173,8 +171,6 @@ def get_args_parser():
     parser.add_argument('--inr_path', default=None, type=str, help='imagenet-r')
     parser.add_argument('--insk_path', default=None, type=str, help='imagenet-sketch')
     parser.add_argument('--cifarc_base_path', default=None, type=str, help='cifarc_base_path')
-    parser.add_argument('--fgsm_test', action='store_true', default=False, help='test on FGSM attacker')
-    parser.add_argument('--pgd_test', action='store_true', default=False, help='test on PGD attacker')
 
     parser.add_argument('--dist-eval', action='store_false', default=True, help='Enabling distributed evaluation')
     parser.add_argument('--num_workers', default=10, type=int)
@@ -193,17 +189,15 @@ def get_args_parser():
     # DeepAugment
     parser.add_argument('--deepaugment', action='store_true', default=False, help='deepaugment')
     parser.add_argument('--deepaugment_base_path', type=str, default=None, help='deepaugment_base_path')
-    parser.add_argument('--remove_deepaug', type=int, default=1000, help='remove_deepaug')
 
-    # FT params
+    # test params
     parser.add_argument('--pretrain_path', type=str, default=None, help='pretrain_path')
+    parser.add_argument('--eval_model_ema', action='store_true', help='eval_model_ema')
 
-    # afat parameters
+    # rspc parameters
     parser.add_argument('--occlusion_ratio', default=0.1, type=float, help="occlusion ratio")
-    parser.add_argument('--afa', action='store_true', help='adversarial feature alignment')
     parser.add_argument('--no_rspc', action='store_false', dest='use_rspc', help='without RSPC')
     parser.add_argument('--extra_weight', type=float, default=0.005, help='lambda: the importance of feature alignment loss')
-    parser.add_argument('--eval_model_ema', action='store_true', help='eval_model_ema')
 
     return parser
 
@@ -378,7 +372,6 @@ def main(args):
         # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
         model_ema = ModelEmaV2(
             model, decay=args.model_ema_decay, device='cpu' if args.model_ema_force_cpu else None)
-
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f'number of params: {n_parameters}')

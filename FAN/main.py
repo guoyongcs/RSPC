@@ -1,8 +1,6 @@
 # Copyright (c) 2021-2022, NVIDIA Corporation & Affiliates. All rights reserved.
 #
 # This work is made available under the Nvidia Source Code License-NC.
-# To view a copy of this license, visit
-# https://github.com/NVlabs/FAN/blob/main/LICENSE
 
 """ ImageNet Training Script
 
@@ -761,7 +759,8 @@ def main():
     try:
         if args.finetune or args.eval_first:
             validate(model, loader_eval, validate_loss_fn, args, amp_autocast=amp_autocast)
-            # eval_inc(_logger, model, torch.device('cuda'), args=args)
+            if args.inc_path:
+                eval_inc(_logger, model, torch.device('cuda'), args=args)
             sys.exit(0)
 
         for epoch in range(start_epoch, num_epochs):
