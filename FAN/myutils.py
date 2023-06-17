@@ -220,31 +220,6 @@ class MetricLogger(object):
             header, total_time_str, total_time / len(iterable)))
 
 
-def _load_checkpoint_for_ema(model_ema, checkpoint):
-    """
-    Workaround for ModelEma._load_checkpoint to accept an already-loaded object
-    """
-    mem_file = io.BytesIO()
-    torch.save(checkpoint, mem_file)
-    mem_file.seek(0)
-    model_ema._load_checkpoint(mem_file)
-
-
-def setup_for_distributed(is_master):
-    """
-    This function disables printing when not in master process
-    """
-    import builtins as __builtin__
-    builtin_print = __builtin__.print
-
-    def print(*args, **kwargs):
-        force = kwargs.pop('force', False)
-        if is_master or force:
-            builtin_print(*args, **kwargs)
-
-    __builtin__.print = print
-
-
 def is_dist_avail_and_initialized():
     if not dist.is_available():
         return False
@@ -309,51 +284,6 @@ def aug(args, image, preprocess):
 
     mixed = (1 - m) * preprocess(image) + m * mix
     return mixed
-
-
-class AugMixDataset(torch.utils.data.Dataset):
-    """Dataset wrapper to perform AugMix augmentation."""
-
-    def __init__(self, args, dataset, preprocess):
-        self.args = args
-        self.dataset = dataset
-        self.preprocess = preprocess
-        self.no_jsd = not args.jsd
-
-    def __getitem__(self, i):
-        x, y = self.dataset[i]
-        if self.no_jsd:
-            return aug(self.args, x, self.preprocess), y
-        else:
-            im_tuple = (self.preprocess(x), aug(self.args, x, self.preprocess),
-                        aug(self.args, x, self.preprocess))
-            return im_tuple, y
-
-    def __len__(self):
-        return len(self.dataset)
-
-
-class keydefaultdict(defaultdict):
-    def __missing__(self, key):
-        if self.default_factory is None:
-            raise KeyError(key)
-        else:
-            ret = self[key] = self.default_factory(key)
-            return ret
-
-
-def get_variable(inputs, device, **kwargs):
-    if type(inputs) in [list, np.ndarray]:
-        inputs = torch.tensor(inputs)
-    out = Variable(inputs.to(device), **kwargs)
-    return out
-
-
-try:
-    from apex.optimizers import FusedNovoGrad, FusedAdam, FusedLAMB, FusedSGD
-    has_apex = True
-except ImportError:
-    has_apex = False
 
 
 def FeatureAlignmentLoss(model):
@@ -446,26 +376,6 @@ def mIoU_attn(model, samples, occluded_samples, topk=0.1):
                 num_attn += 1
     miou = total_iou/(num_attn+1e-6)
     return miou
-
-
-def dotproduct_attn(model, samples, occluded_samples):
-    total_dp = 0
-    num_attn = 0
-
-    joint_input = torch.cat([samples, occluded_samples], 0)
-    _ = model(joint_input)
-    for module in model.modules():
-        if isinstance(module, (Attention, MaskAttention)):
-            if module.vis_attn is not None:
-                layer_attn = module.vis_attn
-                B, num_heads, N, N = layer_attn.shape
-                layer_attn_0 = layer_attn[0:B//2]
-                layer_attn_1 = layer_attn[B//2:]
-                total_dp+=torch.dot(layer_attn_0.reshape(-1), layer_attn_1.reshape(-1))
-                num_attn += num_heads*N*B//2
-    mdp = total_dp/(num_attn+1e-6)
-    return mdp
-
 
 def cosine_attn(model, samples, occluded_samples):
     total_sim = 0
