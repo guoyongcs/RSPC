@@ -1,5 +1,3 @@
-# Copyright (c) 2015-present, Facebook, Inc.
-# All rights reserved.
 import os
 import argparse
 import datetime
@@ -22,7 +20,7 @@ from timm.optim import create_optimizer
 from timm.utils import NativeScaler, get_state_dict, ModelEmaV2
 
 from datasets import build_dataset, build_transform
-from engine import train_one_epoch, train_one_epoch_afa, evaluate, eval_inc, eval_cifarc
+from engine import train_one_epoch, train_one_epoch_rspc, evaluate, eval_inc, eval_cifarc
 from losses import DistillationLoss
 from samplers import RASampler
 import robust_models
@@ -164,8 +162,6 @@ def get_args_parser():
     parser.add_argument('--resume', default='', help='resume from checkpoint')
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='start epoch')
-    parser.add_argument('--ft_start_epoch', default=0, type=int, metavar='N',
-                        help='start epoch')
 
     # eval parameters
     parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
@@ -191,19 +187,14 @@ def get_args_parser():
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
-    # DeepAugment
-    parser.add_argument('--deepaugment', action='store_true', default=False, help='deepaugment')
-    parser.add_argument('--deepaugment_base_path', type=str, default=None, help='deepaugment_base_path')
-    parser.add_argument('--remove_deepaug', type=int, default=1000, help='remove_deepaug')
-
-    # FT params
+    # test params
     parser.add_argument('--pretrain_path', type=str, default=None, help='pretrain_path')
-
-    # afat parameters
-    parser.add_argument('--mr', default=0.1, type=float, help="")
-    parser.add_argument('--afa', action='store_true', help='adversarial feature alignment')
-    parser.add_argument('--extra_weight', type=float, default=0.005, help='lambda: the importance of feature alignment loss')
     parser.add_argument('--eval_model_ema', action='store_true', help='eval_model_ema')
+
+    # rspc parameters
+    parser.add_argument('--occlusion_ratio', default=0.1, type=float, help="occlusion ratio")
+    parser.add_argument('--no_rspc', action='store_false', dest='use_rspc', help='without RSPC')
+    parser.add_argument('--extra_weight', type=float, default=0.005, help='lambda: the importance of feature alignment loss')
 
     return parser
 
@@ -270,7 +261,6 @@ def main(args):
     seed = args.seed + utils.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
-    # random.seed(seed)
 
     cudnn.benchmark = True
 
@@ -390,7 +380,7 @@ def main(args):
     occlusion_model = None
     occlusion_model_optimizer = None
     if args.afa:
-        occlusion_model = robust_models.PatchOcclusion(args.mr, 3, 16, 196)
+        occlusion_model = robust_models.PatchOcclusion(args.occlusion_ratio, 3, 16, 196)
         occlusion_model.to(device)
         # occlusion_model_without_ddp = occlusion_model
         # if args.distributed:
@@ -624,41 +614,12 @@ def main(args):
     start_time = time.time()
     max_accuracy = 0.0
     for epoch in range(args.start_epoch, args.epochs):
-        if args.deepaugment and epoch-args.ft_start_epoch>args.remove_deepaug:
-            args.deepaugment = False
-            dataset_train, args.nb_classes = build_dataset(is_train=True, args=args)
-            num_tasks = utils.get_world_size()
-            global_rank = utils.get_rank()
-            if args.repeated_aug:
-                sampler_train = RASampler(
-                    dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True
-                )
-            else:
-                sampler_train = torch.utils.data.DistributedSampler(
-                    dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=False
-                )
-            data_loader_train = torch.utils.data.DataLoader(
-                dataset_train, sampler=sampler_train,
-                batch_size=args.batch_size,
-                num_workers=args.num_workers,
-                pin_memory=args.pin_mem,
-                drop_last=True,
-            )
-
-        if args.ft_start_epoch > 0:
-            if epoch==args.ft_start_epoch:
-                lr_scheduler.step(epoch-1)
-            # if epoch-args.ft_start_epoch < args.warmup_epochs:
-            #     tmp_lr = optimizer.param_groups[0]["lr"]
-            #     tmp_lr = tmp_lr * (epoch-args.ft_start_epoch+1) / args.warmup_epochs
-            #     for param_group in optimizer.param_groups:
-            #         param_group['lr'] = tmp_lr
 
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
 
         if args.afa:
-            train_stats = train_one_epoch_afa(logger, args, model, criterion, data_loader_train, optimizer, device, epoch, loss_scaler, args.clip_grad, model_ema, mixup_fn, set_training_mode=args.finetune == '', occlusion_model=occlusion_model, occlusion_model_optimizer=occlusion_model_optimizer)
+            train_stats = train_one_epoch_rspc(logger, args, model, criterion, data_loader_train, optimizer, device, epoch, loss_scaler, args.clip_grad, model_ema, mixup_fn, set_training_mode=args.finetune == '', occlusion_model=occlusion_model, occlusion_model_optimizer=occlusion_model_optimizer)
         else:
             train_stats = train_one_epoch(
                 logger, args, model, criterion, data_loader_train,

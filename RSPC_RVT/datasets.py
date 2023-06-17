@@ -83,15 +83,6 @@ def build_dataset(is_train, args):
                               category=args.inat_category, transform=transform)
         nb_classes = dataset.nb_classes
 
-    if is_train and args.deepaugment:
-        if args.data_set == 'CIFAR10' or args.data_set == 'CIFAR100':
-            assert 'CIFAR' in args.deepaugment_base_path, 'invalid deepaugment_base_path: %s' % args.deepaugment_base_path
-        elif args.data_set == 'IMNET':
-            assert 'CIFAR' not in args.deepaugment_base_path, 'invalid deepaugment_base_path: %s' % args.deepaugment_base_path
-        edsr_data = datasets.ImageFolder(os.path.join(args.deepaugment_base_path, 'EDSR'), transform)
-        cae_data = datasets.ImageFolder(os.path.join(args.deepaugment_base_path, 'CAE'), transform)
-        dataset = torch.utils.data.ConcatDataset([dataset, edsr_data, cae_data])
-
     return dataset, nb_classes
 
 

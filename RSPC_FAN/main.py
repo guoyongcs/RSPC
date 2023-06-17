@@ -310,10 +310,6 @@ parser.add_argument('--use-checkpoint', action='store_true',
 parser.add_argument('--use_patch_aug', action='store_true')
 parser.add_argument('--not_load_ema', action='store_true')
 
-# DeepAugment
-parser.add_argument('--deepaugment', action='store_true', default=False, help='deepaugment')
-parser.add_argument('--deepaugment_base_path', type=str, default=None, help='deepaugment_base_path')
-
 # test params
 parser.add_argument('--pretrain_path', type=str, default=None, help='pretrain_path')
 parser.add_argument('--eval_model_ema', action='store_true', help='eval_model_ema')
@@ -596,12 +592,6 @@ def main():
     # create the train and eval datasets
     dataset_train = create_dataset(
             args.dataset, root=args.data_dir, split=args.train_split, is_training=True, batch_size=args.batch_size)
-    if args.deepaugment:
-        edsr_data = create_dataset(
-            args.dataset, root=os.path.join(args.deepaugment_base_path, 'EDSR'), split=args.train_split, search_split=False, is_training=True, batch_size=args.batch_size)
-        cae_data = create_dataset(
-            args.dataset, root=os.path.join(args.deepaugment_base_path, 'CAE'), split=args.train_split, search_split=False, is_training=True, batch_size=args.batch_size)
-        dataset_train.parser.samples = dataset_train.parser.samples + edsr_data.parser.samples + cae_data.parser.samples
 
     dataset_eval = create_dataset(
         args.dataset, root=args.data_dir, split=args.val_split, is_training=False, batch_size=args.batch_size)

@@ -140,7 +140,7 @@ def train_one_epoch(logger, args, model: torch.nn.Module, criterion: Distillatio
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
-def train_one_epoch_afa(logger, args, model: torch.nn.Module, criterion: DistillationLoss, data_loader: Iterable, optimizer: torch.optim.Optimizer, device: torch.device, epoch: int, loss_scaler, max_norm: float = 0, model_ema: Optional[ModelEma] = None, mixup_fn: Optional[Mixup] = None, set_training_mode=True, occlusion_model=None, occlusion_model_optimizer=None):
+def train_one_epoch_rspc(logger, args, model: torch.nn.Module, criterion: DistillationLoss, data_loader: Iterable, optimizer: torch.optim.Optimizer, device: torch.device, epoch: int, loss_scaler, max_norm: float = 0, model_ema: Optional[ModelEma] = None, mixup_fn: Optional[Mixup] = None, set_training_mode=True, occlusion_model=None, occlusion_model_optimizer=None):
     model.train(set_training_mode)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
