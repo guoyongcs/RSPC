@@ -379,13 +379,9 @@ def main(args):
 
     occlusion_model = None
     occlusion_model_optimizer = None
-    if args.afa:
+    if args.use_rspc:
         occlusion_model = robust_models.PatchOcclusion(args.occlusion_ratio, 3, 16, 196)
         occlusion_model.to(device)
-        # occlusion_model_without_ddp = occlusion_model
-        # if args.distributed:
-        #     occlusion_model = torch.nn.parallel.DistributedDataParallel(occlusion_model, device_ids=[args.local_rank])
-        #     occlusion_model_without_ddp = occlusion_model.module
         occlusion_model_optimizer = torch.optim.SGD(occlusion_model.parameters(), momentum=0.9, nesterov=True, lr=1e-4, weight_decay=0.05)
 
     loss_scaler = NativeScaler()
@@ -480,28 +476,6 @@ def main(args):
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
         if occlusion_model is not None:
             occlusion_model = torch.nn.parallel.DistributedDataParallel(occlusion_model, device_ids=[args.local_rank])
-    # if args.resume:
-    #     if args.resume.startswith('https'):
-    #         checkpoint = torch.hub.load_state_dict_from_url(
-    #             args.resume, map_location='cpu', check_hash=True)
-    #     else:
-    #         checkpoint = torch.load(args.resume, map_location='cpu')
-    #     model_without_ddp.load_state_dict(checkpoint['model'])
-    #
-    #     if args.afa and "occlusion_model" in checkpoint:
-    #         occlusion_model_without_ddp.load_state_dict(checkpoint['occlusion_model'])
-    #
-    #     if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-    #         optimizer.load_state_dict(checkpoint['optimizer'])
-    #         if args.afa and "occlusion_model_optimizer" in checkpoint:
-    #             occlusion_model_optimizer.load_state_dict(checkpoint['occlusion_model_optimizer'])
-    #         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-    #         args.start_epoch = checkpoint['epoch'] + 1
-    #         if args.model_ema:
-    #             load_checkpoint(model_ema.module, args.resume, use_ema=True)
-    #             # utils._load_checkpoint_for_ema(model_ema, checkpoint['model_ema'])
-    #         if 'scaler' in checkpoint:
-    #             loss_scaler.load_state_dict(checkpoint['scaler'])
 
     if args.eval:
 
@@ -618,7 +592,7 @@ def main(args):
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
 
-        if args.afa:
+        if args.use_rspc:
             train_stats = train_one_epoch_rspc(logger, args, model, criterion, data_loader_train, optimizer, device, epoch, loss_scaler, args.clip_grad, model_ema, mixup_fn, set_training_mode=args.finetune == '', occlusion_model=occlusion_model, occlusion_model_optimizer=occlusion_model_optimizer)
         else:
             train_stats = train_one_epoch(
