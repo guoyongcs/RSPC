@@ -433,12 +433,6 @@ def main(args):
             logger.info(f'Load pretrain_path from {args.pretrain_path}')
             load_checkpoint(model, args.pretrain_path, use_ema=args.eval_model_ema)
             load_checkpoint(model_ema.module, args.pretrain_path, use_ema=args.eval_model_ema)
-            if occlusion_model is not None:
-                try:
-                    _ = load_checkpoint(occlusion_model, os.path.join(os.path.dirname(args.pretrain_path), 'occlusion', 'last.pth.tar'))
-                except:
-                    pass
-
 
     saver = None
     occlusion_saver = None

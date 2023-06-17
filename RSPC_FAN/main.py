@@ -527,11 +527,6 @@ def main():
         if args.pretrain_path is not None:
             _logger.info(f'Load pretrain_path from {args.pretrain_path}')
             load_checkpoint(model, args.pretrain_path, use_ema=args.eval_model_ema)
-            if occlusion_model is not None:
-                try:
-                    _ = load_checkpoint(occlusion_model, os.path.join(os.path.dirname(args.pretrain_path), 'occlusion', 'last.pth.tar'))
-                except:
-                    pass
 
     # optionally resume from a checkpoint
     resume_epoch = None
