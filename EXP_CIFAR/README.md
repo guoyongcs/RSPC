@@ -8,7 +8,7 @@
 # Dependencies
 Our code is built based on pytorch and timm library. Please check the detailed dependencies in [requirements.txt](https://github.com/guoyongcs/RSPC/requirements.txt).
 
-# Dataset preparation
+# Dataset Preparation
 
 - Training: Please download the clean [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) and [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.html). We follow [DeepAugment](https://github.com/hendrycks/imagenet-r/tree/master/DeepAugment) to produce the augmented examples using the scripts [CAE_distort_imagenet.py](CAE_distort_imagenet.py) and [EDSR_distort_imagenet.py](EDSR_distort_imagenet.py). For convenience, we also provide a [link](xxx) to download the whole augmented dataset.
 
