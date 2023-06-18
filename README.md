@@ -44,6 +44,7 @@ Our code is built based on pytorch and timm library. Please check the detailed d
 |    RSPC-RVT-S     |   97.73   |   94.14    |  23.0M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_rvt_small_cifar10.pth.tar) |
 | RSPC-FAN-S-Hybrid | **98.06** | **94.59**  |  25.7M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_fan_small_cifar10.pth.tar) |
 
+- Pre-trained models on CIFAR-100 and CIFAR-100-C
 
 |       Model       | CIFAR-100 | CIFAR-100-C | #Params |                                              Download                                              |
 |:-----------------:|:---------:|:-----------:|:-------:|:--------------------------------------------------------------------------------------------------:|
