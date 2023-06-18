@@ -35,29 +35,7 @@ Please download the clean [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.htm
 
 - ImageNet and related robustness benchmarks
 
-Please download the clean [ImageNet](http://image-net.org/) dataset and [ImageNet-C](https://zenodo.org/record/2235448) dataset and structure the datasets as follows:
-
-```
-/PATH/TO/IMAGENET-C/
-  clean/
-    class1/
-      img3.jpeg
-    class2/
-      img4.jpeg
-  corruption1/
-    severity1/
-      class1/
-        img3.jpeg
-      class2/
-        img4.jpeg
-    severity2/
-      class1/
-        img3.jpeg
-      class2/
-        img4.jpeg
-```
-
-We also use other robustness benchmarks for evaluation, including [ImageNet-A](https://github.com/hendrycks/natural-adv-examples) and [ImageNet-P](https://zenodo.org/record/3565846).
+Please download the clean [ImageNet](http://image-net.org/) dataset. We evaluate the models on varisous robustness benchmarks, including [ImageNet-C](https://zenodo.org/record/2235448), [ImageNet-A](https://github.com/hendrycks/natural-adv-examples), and [ImageNet-P](https://zenodo.org/record/3565846).
 
 
 
