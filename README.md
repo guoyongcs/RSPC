@@ -23,7 +23,7 @@ This repository contains the official Pytorch implementation and the pretrained 
 # Dependencies
 Our code is built based on pytorch and timm library. Please check the detailed dependencies in [requirements.txt](requirements.txt).
 
-# Dataset preparation
+# Dataset Preparation
 
 - **CIFAR-10 and related robustness benchmarks**: Please download the clean [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) and the corrupted benchmark [CIFAR-10-C](https://zenodo.org/record/2535967).
 
