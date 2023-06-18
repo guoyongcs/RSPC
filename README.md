@@ -25,17 +25,11 @@ Our code is built based on pytorch and timm library. Please check the detailed d
 
 # Dataset preparation
 
-- CIFAR-10 and related robustness benchmarks
+- **CIFAR-10 and related robustness benchmarks**: Please download the clean [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) and the corrupted benchmark [CIFAR-10-C](https://zenodo.org/record/2535967).
 
-Please download the clean [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) and the corrupted benchmark [CIFAR-10-C](https://zenodo.org/record/2535967).
+- **CIFAR-100 and related robustness benchmarks**: Please download the clean [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.html) and the corrupted benchmark [CIFAR-100-C](https://zenodo.org/record/3555552).
 
-- CIFAR-100 and related robustness benchmarks
-
-Please download the clean [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.html) and the corrupted benchmark [CIFAR-100-C](https://zenodo.org/record/3555552).
-
-- ImageNet and related robustness benchmarks
-
-Please download the clean [ImageNet](http://image-net.org/) dataset. We evaluate the models on varisous robustness benchmarks, including [ImageNet-C](https://zenodo.org/record/2235448), [ImageNet-A](https://github.com/hendrycks/natural-adv-examples), and [ImageNet-P](https://zenodo.org/record/3565846).
+- **ImageNet and related robustness benchmarks**: Please download the clean [ImageNet](http://image-net.org/) dataset. We evaluate the models on varisous robustness benchmarks, including [ImageNet-C](https://zenodo.org/record/2235448), [ImageNet-A](https://github.com/hendrycks/natural-adv-examples), and [ImageNet-P](https://zenodo.org/record/3565846).
 
 
 
