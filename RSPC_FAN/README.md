@@ -63,7 +63,8 @@ python -m torch.distributed.launch --nproc_per_node=4 --nnodes=4 --node_rank=$NO
     --model fan_tiny_8_p4_hybrid -b 128 --sched cosine --epochs 300 --opt adamw -j 16 \
     --warmup-lr 1e-6 --warmup-epochs 5 --model-ema-decay 0.99992 --aa rand-m9-mstd0.5-inc1 \
     --remode pixel --reprob 0.3 --lr 20e-4 --min-lr 1e-6 --weight-decay .05 --drop 0.0 --drop-path .1 \
-    --img-size 224 --mixup 0.8 --cutmix 1.0 --smoothing 0.1 --output ../experiments/exp_rspc_fan_tiny_imagenet --amp --model-ema
+    --img-size 224 --mixup 0.8 --cutmix 1.0 --smoothing 0.1 --output ../experiments/exp_rspc_fan_tiny_imagenet \
+    --amp --model-ema
 ```
 
 Please see the scripts of training more models in [train_script.sh](train_script.sh).
