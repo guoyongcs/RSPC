@@ -74,11 +74,12 @@ Please see the scripts of training more models in [train_script.sh](train_script
 ## Citation
 If you find this repository helpful, please consider citing:
 ```
-@Article{zhou2022understanding,
-  author  = {Daquan Zhou, Zhiding Yu, Enze Xie, Chaowei Xiao, Anima Anandkumar, Jiashi Feng, Jose M. Alvarez},
-  title   = {Understanding The Robustness in Vision Transformers},
-  journal = {arXiv:2204.12451},
-  year    = {2022},
+@inproceedings{guo2023improving,
+  title={Improving robustness of vision transformers by reducing sensitivity to patch corruptions},
+  author={Guo, Yong and Stutz, David and Schiele, Bernt},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={4108--4118},
+  year={2023}
 }
 ```
 
