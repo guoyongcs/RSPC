@@ -16,9 +16,7 @@ Our code is built based on pytorch and timm library. Please check the detailed d
 - Evaluation: We evaluate the model robustness on [CIFAR-10-C](https://zenodo.org/record/2535967) and [CIFAR-100-C](https://zenodo.org/record/3555552).
 
 
-## Results and Pre-trained Models
-
-### Pre-trained models on CIFAR-10 and CIFAR-100
+## Results and Pre-trained Models on CIFAR-10 and CIFAR-100
 
 - Pre-trained models on CIFAR-10 and CIFAR-10-C
 
