@@ -67,35 +67,35 @@ We also use other robustness benchmarks for evaluation, including [ImageNet-A](h
 
 - Pre-trained models on CIFAR-10 and CIFAR-10-C
 
-|       Model       | CIFAR-10 | CIFAR-10-C | #Params |                                             Download                                             |
-|:-----------------:|:--------:|:----------:|:-------:|:------------------------------------------------------------------------------------------------:|
-|    RSPC-RVT-S     |   97.73   |    94.14    |    23.0M    | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_rvt_small_cifar10.pth.tar) |
-| RSPC-FAN-S-Hybrid |   98.06   |    94.59    |  25.7M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_fan_small_cifar10.pth.tar) |
+|       Model       | CIFAR-10  | CIFAR-10-C | #Params |                                             Download                                             |
+|:-----------------:|:---------:|:----------:|:-------:|:------------------------------------------------------------------------------------------------:|
+|    RSPC-RVT-S     |   97.73   |   94.14    |  23.0M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_rvt_small_cifar10.pth.tar) |
+| RSPC-FAN-S-Hybrid | **98.06** | **94.59**  |  25.7M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_fan_small_cifar10.pth.tar) |
 
 
-|   Model    | CIFAR-100 | CIFAR-100-C | #Params |                                              Download                                              |
-|:----------:|:---------:|:-----------:|:-------:|:--------------------------------------------------------------------------------------------------:|
-| RSPC-RVT-S |   84.81    |    74.94     |    23.0M    | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_rvt_small_cifar100.pth.tar)  |
-| RSPC-RVT-S |   85.30    |    75.72     |  25.7M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_fan_small_cifar100.pth.tar)  |
+|       Model       | CIFAR-100 | CIFAR-100-C | #Params |                                              Download                                              |
+|:-----------------:|:---------:|:-----------:|:-------:|:--------------------------------------------------------------------------------------------------:|
+|    RSPC-RVT-S     |   84.81   |    74.94    |    23.0M    | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_rvt_small_cifar100.pth.tar)  |
+| RSPC-FAN-S-Hybrid | **85.30** |  **75.72**  |  25.7M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.1/rspc_fan_small_cifar100.pth.tar)  |
 
 ### ImageNet-1K pre-trained models
 
 - RSPC-RVT pre-trained models
 
 |       Model       | IN-1K $\uparrow$ | IN-C $\downarrow$ | IN-A $\uparrow$ | IN-P $\downarrow$ | #Params |                                                                                Download                                                                                |
-|:-----------------:|:----------------:|:-----------------:|:-----:|:-----:|:-------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|    RSPC-RVT-Ti    |       79.5       |       55.7        | 16.5  | 38.0  |    10.9M    |                                        [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_rvt_tiny.pth.tar)                                         |
-|    RSPC-RVT-S     |       82.2       |       48.4        | 27.9  | 34.3  |  23.3M  |                                        [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_rvt_small.pth.tar)                                        |
-|    RSPC-RVT-B     |       82.8       |       45.7        | 32.1  | 31.0  |  91.8M  |                                        [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_rvt_base.pth.tar)                                         |
+|:-----------------:|:----------------:|:-----------------:|:---------------:|:-----------------:|:-------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|    RSPC-RVT-Ti    |       79.5       |       55.7        |      16.5       |       38.0        |    10.9M    |                                        [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_rvt_tiny.pth.tar)                                         |
+|    RSPC-RVT-S     |       82.2       |       48.4        |      27.9       |       34.3        |  23.3M  |                                        [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_rvt_small.pth.tar)                                        |
+|    RSPC-RVT-B     |     **82.8**     |     **45.7**      |    **32.1**     |     **31.0**      |  91.8M  |                                        [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_rvt_base.pth.tar)                                         |
 
 
 - RSPC-FAN pre-trained models
 
 |       Model       | IN-1K $\uparrow$ | IN-C $\downarrow$ | IN-A $\uparrow$ | IN-P $\downarrow$ | #Params |                                         Download                                         |
-|:-----------------:|:----------------:|:-----------------:|:-----:|:-----:|:-------:|:----------------------------------------------------------------------------------------:|
-| RSPC-FAN-T-Hybrid |       80.3       |       57.2        | 23.6  | 37.3  |    7.5M    | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_tiny.pth.tar)  |
-| RSPC-FAN-S-Hybrid |       83.6       |       47.5        | 36.8  | 33.5  |  25.7M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_small.pth.tar) |
-|  RSPC-FAN-B-ViT   |       84.2       |       44.5        | 41.1  | 30.0  |  50.5M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_base.pth.tar)  |
+|:-----------------:|:----------------:|:-----------------:|:---------------:|:-----------------:|:-------:|:----------------------------------------------------------------------------------------:|
+| RSPC-FAN-T-Hybrid |       80.3       |       57.2        |      23.6       |       37.3        |    7.5M    | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_tiny.pth.tar)  |
+| RSPC-FAN-S-Hybrid |       83.6       |       47.5        |      36.8       |       33.5        |  25.7M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_small.pth.tar) |
+|  RSPC-FAN-B-ViT   |     **84.2**     |     **44.5**      |    **41.1**     |     **30.0**      |  50.5M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_base.pth.tar)  |
 
 
 ## Training and Evaluation
