@@ -9,4 +9,3 @@ CUDA_VISIBLE_DEVICES=0 python main.py --eval --model fan_small_12_p4_hybrid --da
 
 # test RSPC-FAN-S on CIFAR100
 CUDA_VISIBLE_DEVICES=1 python main.py --eval --model fan_small_12_p4_hybrid --data-set CIFAR100 --data-path ../data --output_dir ../experiments/test_rspc_fan_cifar100 --cifarc_base_path ../data/CIFAR-100-C --pretrain_path ../pretrained/rspc_fan_small_cifar100.pth.tar
-
