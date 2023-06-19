@@ -9,7 +9,7 @@ Our code is built based on pytorch and timm library. Please check the detailed d
 
 # Dataset Preparation
 
-- Training: Please download the clean [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) and [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.html). We follow [DeepAugment](https://github.com/hendrycks/imagenet-r/tree/master/DeepAugment) to produce the augmented examples using the scripts:
+- Training: Please download clean [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) and [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.html). We follow [DeepAugment](https://github.com/hendrycks/imagenet-r/tree/master/DeepAugment) to produce augmented examples using the scripts:
   - On CIFAR-10: Please use [CAE_distort_cifar10.py](DeepAugment/CAE_distort_cifar10.py) and [EDSR_distort_cifar10.py](DeepAugment/EDSR_distort_cifar10.py).
   - On CIFAR-100: Please use [CAE_distort_cifar100.py](DeepAugment/CAE_distort_cifar100.py) and [EDSR_distort_cifar100.py](DeepAugment/EDSR_distort_cifar100.py). 
     
