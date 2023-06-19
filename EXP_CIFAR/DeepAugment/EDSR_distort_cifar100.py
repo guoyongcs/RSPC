@@ -312,7 +312,7 @@ class FolderWithPath(dset.CIFAR100):
             sample = self.transform(sample)
 
         # save_path = '~/data/hendrycks/DistortedImageNet/' + str(self.option) + '/' + self.idx_to_class[target]
-        save_path = '../data/CIFAR-100-DeepAugment/EDSR/' + self.idx_to_class[target]
+        save_path = '../../data/CIFAR-100-DeepAugment/EDSR/' + self.idx_to_class[target]
 
         if not os.path.exists(save_path):
             os.makedirs(save_path)
@@ -333,7 +333,7 @@ class FolderWithPath(dset.CIFAR100):
 
 
 distorted_dataset = FolderWithPath(
-    root="../data", transform=test_transform)
+    root="../../data", transform=test_transform)
 
 # distorted_dataset[0]
 

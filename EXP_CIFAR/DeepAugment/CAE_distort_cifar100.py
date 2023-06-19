@@ -175,7 +175,7 @@ class FolderWithPath(dset.CIFAR100):
         if self.transform is not None:
             sample = self.transform(sample)
 
-        save_path = '../data/CIFAR-100-DeepAugment/CAE/' + self.idx_to_class[target]
+        save_path = '../../data/CIFAR-100-DeepAugment/CAE/' + self.idx_to_class[target]
 
         if not os.path.exists(save_path):
             os.makedirs(save_path)
@@ -195,7 +195,7 @@ class FolderWithPath(dset.CIFAR100):
         return 0
 
 distorted_dataset = FolderWithPath(
-    root="../data", transform=test_transform)
+    root="../../data", transform=test_transform)
 
 loader = torch.utils.data.DataLoader(distorted_dataset, batch_size=1, shuffle=True)
 
