@@ -13,7 +13,7 @@ Our code is built based on pytorch and timm library. Please check the detailed d
   - On CIFAR-10: Please use [CAE_distort_cifar10.py](DeepAugment/CAE_distort_cifar10.py) and [EDSR_distort_cifar10.py](DeepAugment/EDSR_distort_cifar10.py).
   - On CIFAR-100: Please use [CAE_distort_cifar100.py](DeepAugment/CAE_distort_cifar100.py) and [EDSR_distort_cifar100.py](DeepAugment/EDSR_distort_cifar100.py). 
     
-    Please see how to run these scripts in [make_deepaugment.sh](DeepAugment/make_deepaugment.sh). For convenience, we also provide a [link](xxx) to download the whole augmented dataset.
+    Please see how to run these scripts in [make_deepaugment.sh](DeepAugment/make_deepaugment.sh). For convenience, we also provide the download links for [CIFAR-10-DeepAugment.tar](https://drive.google.com/file/d/1pqwG5EYsbCS7BEzCbhNon4TTZYBMuo0Z/view?usp=sharing) and [CIFAR-100-DeepAugment.tar](https://drive.google.com/file/d/1i8Tt1EVtfz0tHPIASLZMwjmQSm8766Cb/view?usp=sharing). Please download and unzip these files using ```tar -xvf CIFAR-10-DeepAugment.tar```.
 
 
 - Evaluation: We evaluate the model robustness on [CIFAR-10-C](https://zenodo.org/record/2535967) and [CIFAR-100-C](https://zenodo.org/record/3555552).
