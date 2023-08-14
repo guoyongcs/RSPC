@@ -5,7 +5,7 @@
 
 
 # Dependencies
-Our code is built based on pytorch and timm library. Please check the detailed dependencies in [requirements.txt](https://github.com/guoyongcs/RSPC/requirements.txt).
+Our code is built based on pytorch and timm library. Please check the detailed dependencies in [requirements.txt](https://github.com/guoyongcs/RSPC/blob/main/requirements.txt).
 
 # Dataset Preparation
 
