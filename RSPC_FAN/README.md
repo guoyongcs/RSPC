@@ -41,7 +41,7 @@ We also use other robustness benchmarks for evaluation, including [ImageNet-A](h
 |:-----------------:|:----------------:|:-----------------:|:---------------:|:-----------------:|:-------:|:----------------------------------------------------------------------------------------:|
 | RSPC-FAN-T-Hybrid |       80.3       |       57.2        |      23.6       |       37.3        |    7.5M    | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_tiny.pth.tar)  |
 | RSPC-FAN-S-Hybrid |       83.6       |       47.5        |      36.8       |       33.5        |  25.7M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_small.pth.tar) |
-|  RSPC-FAN-B-ViT   |     **84.2**     |     **44.5**      |    **41.1**     |     **30.0**      |  50.5M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_base.pth.tar)  |
+|  RSPC-FAN-B-Hybrid   |     **84.2**     |     **44.5**      |    **41.1**     |     **30.0**      |  50.5M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_base.pth.tar)  |
 
 
 ## Evaluation
