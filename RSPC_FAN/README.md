@@ -44,7 +44,7 @@ We also use other robustness benchmarks for evaluation, including [ImageNet-A](h
 |  RSPC-FAN-B-Hybrid   |     **84.2**     |     **44.5**      |    **41.1**     |     **30.0**      |  50.5M  | [model](https://github.com/guoyongcs/RSPC/releases/download/v1.0/rspc_fan_base.pth.tar)  |
 
 
-## Evaluation
+## Evaluation 
 - Evaluate RSPC-FAN-T-Hybrid on ImageNet (and optionally on ImageNet-C):
 ```
 CUDA_VISIBLE_DEVICES=0 python main.py /PATH/TO/IMAGENET --model fan_tiny_8_p4_hybrid \
